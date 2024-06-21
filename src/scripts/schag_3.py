@@ -1,3 +1,4 @@
+python
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
@@ -14,7 +15,7 @@ geo_df = spark.read.csv("/user/master/data/raw/geo/geo.csv", header=True, inferS
 events_with_geo_df = events_df.join(
     geo_df,
     on=[
-        (F.abs(events_df.latitude - geo_df.latitude) < 0.01) & 
+        (F.abs(events_df.latitude - geo_df.latitude) < 0.01) &
         (F.abs(events_df.longitude - geo_df.longitude) < 0.01)
     ],
     how="left"
@@ -30,11 +31,22 @@ zone_events_df = events_with_geo_df.withColumn("week", F.weekofyear("TIME_UTC"))
         F.count("reaction_id").alias("week_reaction"),
         F.count("subscription_id").alias("week_subscription"),
         F.count("registration_id").alias("week_user"),  # Используем registration_id как proxy для новых пользователей
-        F.sum("week_message").over(Window.partitionBy("city").orderBy("month", "week")).alias("month_message"),
-        F.sum("week_user").over(Window.partitionBy("city").orderBy("month", "week")).alias("month_user"),
-        F.sum("week_reaction").over(Window.partitionBy("city").orderBy("month", "week")).alias("month_reaction"),
-        F.sum("week_subscription").over(Window.partitionBy("city").orderBy("month", "week")).alias("month_subscription")
     )
+
+# Вычисление месячных метрик с помощью оконных функций
+zone_events_df = zone_events_df.withColumn(
+    "month_message",
+    F.sum("week_message").over(Window.partitionBy("city").orderBy("month", "week"))
+).withColumn(
+    "month_user",
+    F.sum("week_user").over(Window.partitionBy("city").orderBy("month", "week"))
+).withColumn(
+    "month_reaction",
+    F.sum("week_reaction").over(Window.partitionBy("city").orderBy("month", "week"))
+).withColumn(
+    "month_subscription",
+    F.sum("week_subscription").over(Window.partitionBy("city").orderBy("month", "week"))
+)
 
 # Создание витрины zone_events
 zone_events_df = zone_events_df.withColumnRenamed("city", "zone_id")
