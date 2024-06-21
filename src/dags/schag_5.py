@@ -1,10 +1,11 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 
-from scripts.user_profile_creation import create_user_profile
-from scripts.zone_events_creation import create_zone_events
-from scripts.friend_recommendation_creation import create_friend_recommendation
+# Скрипты для создания витрин
+user_profile_script = "/path/to/user_profile_creation.py"
+zone_events_script = "/path/to/zone_events_creation.py"
+friend_recommendation_script = "/path/to/friend_recommendation_creation.py"
 
 with DAG(
     "data_lake_update",
@@ -14,19 +15,19 @@ with DAG(
 ) as dag:
 
     # Операторы для создания витрин
-    user_profile_task = PythonOperator(
+    user_profile_task = BashOperator(
         task_id="create_user_profile",
-        python_callable=create_user_profile
+        bash_command=f"spark-submit {user_profile_script}"
     )
 
-    zone_events_task = PythonOperator(
+    zone_events_task = BashOperator(
         task_id="create_zone_events",
-        python_callable=create_zone_events
+        bash_command=f"spark-submit {zone_events_script}"
     )
 
-    friend_recommendation_task = PythonOperator(
+    friend_recommendation_task = BashOperator(
         task_id="create_friend_recommendation",
-        python_callable=create_friend_recommendation
+        bash_command=f"spark-submit {friend_recommendation_script}"
     )
 
     # Определение зависимостей
